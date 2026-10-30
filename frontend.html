@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SI MBAH ICPH</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root {
+            --primary-blue: #0d6efd;
+            --light-blue: #e7f1ff;
+            --dark-blue: #0a58ca;
+            --sidebar-width: 250px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            overflow-x: hidden;
+        }
+
+        /* Loading Overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.3s;
+        }
+
+        /* Sidebar Styling */
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .sidebar-brand {
+            padding: 20px;
+            background: var(--primary-blue);
+            color: white;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+
+        .nav-link {
+            color: #495057;
+            padding: 12px 20px;
+            border-left: 4px solid transparent;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-link:hover {
+            background: var(--light-blue);
+            color: var(--primary-blue);
+        }
+
+        .nav-link.active {
+            background: var(--light-blue);
+            color: var(--primary-blue);
+            border-left-color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        .nav-link i { margin-right: 10px; }
+
+        /* Main Content */
+        #main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            min-height: 100vh;
+            transition: all 0.3s;
+        }
+
+        /* Topbar */
+        .topbar {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--primary-blue);
+            cursor: pointer;
+        }
+
+        /* Cards */
+        .dashboard-card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        .dashboard-card:hover { transform: translateY(-3px); }
+        .card-icon { font-size: 2.5rem; opacity: 0.2; position: absolute; right: 20px; top: 20px; }
+        
+        .content-section { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .content-section.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Tables */
+        .table-responsive { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+        table thead { background-color: var(--light-blue); }
+        .table-hover tbody tr:hover { background-color: #f8f9fa; }
+        
+        .badge-low-stock { background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.8em; }
+        .badge-safe-stock { background-color: #198754; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.8em; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #sidebar { transform: translateX(-100%); }
+            #sidebar.show { transform: translateX(0); }
+            #main-content { margin-left: 0; }
+            .menu-toggle { display: block; }
+            #sidebar-overlay {
+                display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); z-index: 999;
+            }
+            #sidebar-overlay.show { display: block; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h5 class="mt-3 text-primary">Memuat Data...</h5>
+    </div>
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-box-seam"></i> SI MBAH ICPH
+        </div>
+        <div class="nav flex-column mt-3">
+            <a class="nav-link active" onclick="navigate('dashboard')"><i class="bi bi-speedometer2"></i> Dashboard</a>
+            <a class="nav-link" onclick="navigate('master')"><i class="bi bi-database"></i> Master Barang</a>
+            <a class="nav-link" onclick="navigate('masuk')"><i class="bi bi-box-arrow-in-right"></i> Barang Masuk</a>
+            <a class="nav-link" onclick="navigate('keluar')"><i class="bi bi-box-arrow-right"></i> Barang Keluar</a>
+            <a class="nav-link" onclick="navigate('laporan')"><i class="bi bi-file-earmark-text"></i> Laporan</a>
+            <hr class="mx-3">
+            <a class="nav-link text-danger" onclick="confirmResetData()"><i class="bi bi-trash3"></i> Reset Data</a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content">
+        <!-- Topbar -->
+        <div class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="bi bi-list"></i>
+            </button>
+            <h4 class="mb-0 text-primary fw-bold" id="page-title">Dashboard</h4>
+            <div id="clock" class="text-muted fw-bold"></div>
+        </div>
+
+        <!-- ================= DASHBOARD SECTION ================= -->
+        <div id="sec-dashboard" class="content-section active">
+            <div class="row g-3 mb-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="dashboard-card card bg-primary text-white p-3 h-100 relative">
+                        <i class="bi bi-boxes card-icon"></i>
+                        <h6>Total Item Barang</h6>
+                        <h2 id="dash-total-item">0</h2>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="dashboard-card card bg-success text-white p-3 h-100 relative">
+                        <i class="bi bi-check-circle card-icon"></i>
+                        <h6>Total Stok Tersedia</h6>
+                        <h2 id="dash-total-stok">0</h2>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="dashboard-card card bg-info text-white p-3 h-100 relative">
+                        <i class="bi bi-arrow-down-circle card-icon"></i>
+                        <h6>Barang Masuk (Bulan Ini)</h6>
+                        <h2 id="dash-in-month">0</h2>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="dashboard-card card bg-warning text-white p-3 h-100 relative">
+                        <i class="bi bi-arrow-up-circle card-icon"></i>
+                        <h6>Barang Keluar (Bulan Ini)</h6>
+                        <h2 id="dash-out-month">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+                    <h5 class="text-danger"><i class="bi bi-exclamation-triangle"></i> Peringatan Stok Menipis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Kode</th>
+                                    <th>Nama Barang</th>
+                                    <th>Unit</th>
+                                    <th>Stok Saat Ini</th>
+                                    <th>Min. Stok</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-low-stock">
+                                <!-- Data injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MASTER BARANG SECTION ================= -->
+        <div id="sec-master" class="content-section">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <button class="btn btn-primary" onclick="openModalMaster()"><i class="bi bi-plus-lg"></i> Tambah Barang</button>
+                <div class="input-group" style="max-width: 300px;">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="search-master" placeholder="Cari barang..." oninput="renderMasterTable()">
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID Barang</th>
+                            <th>Nama Barang</th>
+                            <th>Kategori</th>
+                            <th>Unit</th>
+                            <th>Satuan</th>
+                            <th>Harga Beli</th>
+                            <th>Stok Awal</th>
+                            <th>Min. Stok</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-master">
+                        <!-- Data injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= BARANG MASUK SECTION ================= -->
+        <div id="sec-masuk" class="content-section">
+            <div class="row">
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-header bg-white"><h5 class="mb-0">Form Barang Masuk</h5></div>
+                        <div class="card-body">
+                            <form id="form-masuk" onsubmit="saveBarangMasuk(event)">
+                                <div class="mb-3">
+                                    <label class="form-label">Pilih Barang</label>
+                                    <select class="form-select" id="in-item-id" required onchange="updateInboundUnitInfo()">
+                                        <option value="">-- Pilih Barang --</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Unit Barang</label>
+                                    <input type="text" class="form-control bg-light" id="in-unit" readonly>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label">Jumlah Masuk</label>
+                                        <input type="number" class="form-control" id="in-jumlah" min="1" required>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label">Tanggal</label>
+                                        <input type="date" class="form-control" id="in-tanggal" required>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Keterangan / Supplier</label>
+                                    <textarea class="form-control" id="in-keterangan" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Simpan Transaksi</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white"><h5 class="mb-0">Riwayat Terakhir</h5></div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive m-0">
+                                <table class="table table-sm table-striped m-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Tgl</th>
+                                            <th>Barang</th>
+                                            <th>Jml</th>
+                                            <th>Ket</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-recent-in"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= BARANG KELUAR SECTION ================= -->
+        <div id="sec-keluar" class="content-section">
+            <div class="row">
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-header bg-white"><h5 class="mb-0">Form Barang Keluar</h5></div>
+                        <div class="card-body">
+                            <form id="form-keluar" onsubmit="saveBarangKeluar(event)">
+                                <div class="mb-3">
+                                    <label class="form-label">Pilih Barang</label>
+                                    <select class="form-select" id="out-item-id" required onchange="updateOutboundOptions()">
+                                        <option value="">-- Pilih Barang --</option>
+                                    </select>
+                                    <small id="out-stock-info" class="text-primary fw-bold d-block mt-1"></small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Unit Barang</label>
+                                    <input type="text" class="form-control bg-light" id="out-unit" readonly>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Kebutuhan Sub Unit</label>
+                                    <select class="form-select" id="out-sub-unit" required>
+                                        <option value="">-- Pilih --</option>
+                                        <!-- Options populated via JS based on Unit -->
+                                    </select>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label">Jumlah Keluar</label>
+                                        <input type="number" class="form-control" id="out-jumlah" min="1" required>
+                                        <div class="invalid-feedback" id="out-error-qty">Stok tidak mencukupi!</div>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label">Tanggal</label>
+                                        <input type="date" class="form-control" id="out-tanggal" required>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Keterangan / Pengambil</label>
+                                    <textarea class="form-control" id="out-keterangan" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-warning w-100"><i class="bi bi-box-seam"></i> Keluarkan Barang</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white"><h5 class="mb-0">Riwayat Terakhir</h5></div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive m-0">
+                                <table class="table table-sm table-striped m-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Tgl</th>
+                                            <th>Barang</th>
+                                            <th>Sub Unit</th>
+                                            <th>Jml</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-recent-out"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= LAPORAN SECTION ================= -->
+        <div id="sec-laporan" class="content-section">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row align-items-end">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label>Dari Tanggal</label>
+                            <input type="date" id="rep-start" class="form-control">
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label>Sampai Tanggal</label>
+                            <input type="date" id="rep-end" class="form-control">
+                        </div>
+                        <div class="col-md-4 d-flex gap-2">
+                            <button class="btn btn-primary flex-grow-1" onclick="generateReport()"><i class="bi bi-funnel"></i> Filter</button>
+                            <button class="btn btn-success" onclick="exportCSV()"><i class="bi bi-filetype-csv"></i> Export CSV</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>No</th>
+                            <th>Kode/Nama Barang</th>
+                            <th>Unit</th>
+                            <th>Stok Awal</th>
+                            <th class="text-success">Total Masuk</th>
+                            <th class="text-danger">Total Keluar</th>
+                            <th class="bg-primary text-white">Stok Akhir</th>
+                            <th>Min Stok</th>
+                            <th>Status Stok</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-report">
+                        <!-- Data report -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div> <!-- End Main Content -->
+
+    <!-- Modal Form Master Barang -->
+    <div class="modal fade" id="modalMaster" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalMasterTitle">Tambah Barang</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="form-master" onsubmit="saveMasterBarang(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="item-id">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nama Barang <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="item-nama" minlength="3" required>
+                            <div class="invalid-feedback">Nama barang minimal 3 karakter.</div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Kategori <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="item-kategori" required>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Unit <span class="text-danger">*</span></label>
+                                <select class="form-select" id="item-unit" required>
+                                    <option value="">-- Pilih Unit --</option>
+                                    <option value="CSSD">CSSD</option>
+                                    <option value="Laundry">Laundry</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Satuan <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="item-satuan" placeholder="Pcs, Box, Liter..." required>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Harga Beli <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="item-harga" min="0" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Stok Awal <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="item-stokawal" min="0" required>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Minimum Stok <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="item-minstok" min="0" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Simpan Data</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Application Logic -->
+    <script>
+        // ================= STATE & DATABASE =================
+        let db = {
+            items: [],
+            inbound: [],
+            outbound: []
+        };
+        
+        let modalMasterObj;
+        
+        // ================= INITIALIZATION =================
+        document.addEventListener('DOMContentLoaded', () => {
+            modalMasterObj = new bootstrap.Modal(document.getElementById('modalMaster'));
+            
+            // Set default date for forms
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('in-tanggal').value = today;
+            document.getElementById('out-tanggal').value = today;
+            
+            // Setup Clock
+            setInterval(updateClock, 1000);
+            updateClock();
+
+            loadData();
+        });
+
+        // ================= CORE FUNCTIONS =================
+        
+        function startLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+
+        function endLoading() {
+            setTimeout(() => {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }, 300);
+        }
+
+        function loadData() {
+            startLoading();
+
+            if (typeof google === 'undefined') {
+                // SIMULATION MODE (Canvas / Local Browser)
+                console.log("Running in Simulation Mode (LocalStorage)");
+                const localData = localStorage.getItem('simbah_icph_data');
+                
+                if (localData) {
+                    db = JSON.parse(localData);
+                } else {
+                    // Dummy Initial Data for Canvas evaluation
+                    db = {
+                        items: [
+                            { id: "INV-1710000000001", nama: "Detergen Cair 5L", kategori: "Sabun", unit: "Laundry", satuan: "Jerigen", hargaBeli: 150000, stokAwal: 10, minStok: 5, createdAt: new Date().toISOString() },
+                            { id: "INV-1710000000002", nama: "Kertas Sterilisasi", kategori: "BHP", unit: "CSSD", satuan: "Roll", hargaBeli: 200000, stokAwal: 5, minStok: 2, createdAt: new Date().toISOString() }
+                        ],
+                        inbound: [
+                            { id: "IN-1", itemId: "INV-1710000000001", jumlah: 5, tanggal: new Date().toISOString().split('T')[0], keterangan: "Supplier A" }
+                        ],
+                        outbound: []
+                    };
+                }
+                
+                renderUI();
+                endLoading();
+
+            } else {
+                // PRODUCTION MODE (Google Apps Script)
+                google.script.run
+                    .withSuccessHandler(res => {
+                        db = res;
+                        renderUI();
+                        endLoading();
+                    })
+                    .withFailureHandler(err => {
+                        console.error(err);
+                        Swal.fire('Error', 'Gagal memuat data dari server', 'error');
+                        endLoading();
+                    })
+                    .getAllData();
+            }
+        }
+
+        function saveDataState() {
+            startLoading();
+            
+            if (typeof google === 'undefined') {
+                // SIMULATION MODE
+                localStorage.setItem('simbah_icph_data', JSON.stringify(db));
+                renderUI();
+                endLoading();
+                showToast('Data berhasil disimpan', 'success');
+            } else {
+                // PRODUCTION MODE
+                const dataStr = JSON.stringify(db);
+                google.script.run
+                    .withSuccessHandler(() => {
+                        renderUI();
+                        endLoading();
+                        showToast('Data berhasil disimpan ke Cloud', 'success');
+                    })
+                    .withFailureHandler(err => {
+                        console.error(err);
+                        Swal.fire('Error', 'Gagal menyimpan ke server', 'error');
+                        endLoading();
+                    })
+                    .saveDataState(dataStr);
+            }
+        }
+
+        function renderUI() {
+            calculateDashboardStats();
+            renderMasterTable();
+            populateItemDropdowns();
+            renderRecentTransactions();
+            generateReport(); // Initial load report
+        }
+
+        // ================= NAVIGATION & UI HELPERS =================
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+            document.getElementById('sidebar-overlay').classList.toggle('show');
+        }
+
+        function navigate(pageId) {
+            // Update active class on nav
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+            
+            // Show target section
+            document.getElementById('sec-' + pageId).classList.add('active');
+            
+            // Update Title
+            const titles = {
+                'dashboard': 'Dashboard',
+                'master': 'Master Data Barang',
+                'masuk': 'Transaksi Barang Masuk',
+                'keluar': 'Transaksi Barang Keluar',
+                'laporan': 'Laporan Inventori'
+            };
+            document.getElementById('page-title').innerText = titles[pageId];
+
+            // Close sidebar on mobile after click
+            if(window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+            
+            // Scroll to top
+            window.scrollTo(0,0);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const options = { timeZone: 'Asia/Jakarta', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            document.getElementById('clock').innerText = now.toLocaleDateString('id-ID', options) + ' WIB';
+        }
+
+        function showToast(msg, type='success') {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+            Toast.fire({
+                icon: type,
+                title: msg
+            });
+        }
+
+        function generateId(prefix) {
+            // Generate timezone aware timestamp for Asia/Jakarta as part of ID
+            const d = new Date();
+            const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+            const nd = new Date(utc + (3600000*7)); // +7 for Jakarta
+            
+            const timestamp = nd.getFullYear().toString() + 
+                              (nd.getMonth()+1).toString().padStart(2,'0') + 
+                              nd.getDate().toString().padStart(2,'0') + 
+                              nd.getHours().toString().padStart(2,'0') + 
+                              nd.getMinutes().toString().padStart(2,'0') + 
+                              nd.getSeconds().toString().padStart(2,'0');
+                              
+            return `${prefix}-${timestamp}-${Math.floor(Math.random()*1000)}`;
+        }
+
+        function formatRp(angka) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+        }
+
+        // ================= BUSINESS LOGIC =================
+
+        function calcCurrentStock(itemId) {
+            const item = db.items.find(i => i.id === itemId);
+            if(!item) return 0;
+
+            const totalIn = db.inbound
+                .filter(i => i.itemId === itemId)
+                .reduce((sum, curr) => sum + parseInt(curr.jumlah), 0);
+            
+            const totalOut = db.outbound
+                .filter(o => o.itemId === itemId)
+                .reduce((sum, curr) => sum + parseInt(curr.jumlah), 0);
+
+            return parseInt(item.stokAwal) + totalIn - totalOut;
+        }
+
+        // ================= DASHBOARD =================
+
+        function calculateDashboardStats() {
+            const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+            
+            // Total Items
+            document.getElementById('dash-total-item').innerText = db.items.length;
+
+            // Total Stock & Low Stock Table
+            let totalStok = 0;
+            let lowStockHTML = '';
+            
+            db.items.forEach(item => {
+                const stok = calcCurrentStock(item.id);
+                totalStok += stok;
+
+                if (stok <= item.minStok) {
+                    lowStockHTML += `
+                        <tr>
+                            <td class="text-muted"><small>${item.id.split('-')[1] || item.id}</small></td>
+                            <td class="fw-bold">${item.nama}</td>
+                            <td>${item.unit}</td>
+                            <td class="fw-bold text-danger">${stok} ${item.satuan}</td>
+                            <td>${item.minStok}</td>
+                            <td><span class="badge-low-stock">Segera Restock</span></td>
+                        </tr>
+                    `;
+                }
+            });
+            document.getElementById('dash-total-stok').innerText = totalStok;
+            
+            if(lowStockHTML === '') {
+                lowStockHTML = '<tr><td colspan="6" class="text-center text-muted py-3">Semua stok barang dalam kondisi aman.</td></tr>';
+            }
+            document.getElementById('table-low-stock').innerHTML = lowStockHTML;
+
+            // In / Out this month
+            const inMonth = db.inbound
+                .filter(i => i.tanggal.startsWith(currentMonth))
+                .reduce((sum, curr) => sum + parseInt(curr.jumlah), 0);
+            document.getElementById('dash-in-month').innerText = inMonth;
+
+            const outMonth = db.outbound
+                .filter(o => o.tanggal.startsWith(currentMonth))
+                .reduce((sum, curr) => sum + parseInt(curr.jumlah), 0);
+            document.getElementById('dash-out-month').innerText = outMonth;
+        }
+
+        // ================= MASTER BARANG =================
+
+        function renderMasterTable() {
+            const tbody = document.getElementById('table-master');
+            const search = document.getElementById('search-master').value.toLowerCase();
+            
+            tbody.innerHTML = '';
+            
+            const filteredItems = db.items.filter(item => 
+                item.nama.toLowerCase().includes(search) || 
+                item.id.toLowerCase().includes(search) ||
+                item.kategori.toLowerCase().includes(search)
+            );
+
+            if(filteredItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4">Data barang tidak ditemukan.</td></tr>';
+                return;
+            }
+
+            filteredItems.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-muted small">${item.id}</td>
+                    <td class="fw-bold">${item.nama}</td>
+                    <td><span class="badge bg-secondary">${item.kategori}</span></td>
+                    <td>${item.unit}</td>
+                    <td>${item.satuan}</td>
+                    <td>${formatRp(item.hargaBeli)}</td>
+                    <td>${item.stokAwal}</td>
+                    <td>${item.minStok}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editMasterBarang('${item.id}')"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteMasterBarang('${item.id}')"><i class="bi bi-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openModalMaster() {
+            document.getElementById('form-master').reset();
+            document.getElementById('item-id').value = '';
+            document.getElementById('modalMasterTitle').innerText = 'Tambah Barang Baru';
+            
+            // Reset validation states
+            document.getElementById('form-master').classList.remove('was-validated');
+            
+            modalMasterObj.show();
+            
+            // Auto focus
+            setTimeout(() => {
+                document.getElementById('item-nama').focus();
+            }, 500);
+        }
+
+        function editMasterBarang(id) {
+            const item = db.items.find(i => i.id === id);
+            if(!item) return;
+
+            document.getElementById('item-id').value = item.id;
+            document.getElementById('item-nama').value = item.nama;
+            document.getElementById('item-kategori').value = item.kategori;
+            document.getElementById('item-unit').value = item.unit;
+            document.getElementById('item-satuan').value = item.satuan;
+            document.getElementById('item-harga').value = item.hargaBeli;
+            document.getElementById('item-stokawal').value = item.stokAwal;
+            document.getElementById('item-minstok').value = item.minStok;
+
+            document.getElementById('modalMasterTitle').innerText = 'Edit Barang';
+            modalMasterObj.show();
+        }
+
+        function saveMasterBarang(e) {
+            e.preventDefault();
+            const form = document.getElementById('form-master');
+            
+            // HTML5 Validation check
+            if (!form.checkValidity()) {
+                e.stopPropagation();
+                form.classList.add('was-validated');
+                return;
+            }
+
+            const id = document.getElementById('item-id').value;
+            const itemData = {
+                id: id || generateId('INV'),
+                nama: document.getElementById('item-nama').value.trim(),
+                kategori: document.getElementById('item-kategori').value.trim(),
+                unit: document.getElementById('item-unit').value,
+                satuan: document.getElementById('item-satuan').value.trim(),
+                hargaBeli: document.getElementById('item-harga').value,
+                stokAwal: document.getElementById('item-stokawal').value,
+                minStok: document.getElementById('item-minstok').value,
+                createdAt: new Date().toISOString()
+            };
+
+            if (id) {
+                // Update
+                const index = db.items.findIndex(i => i.id === id);
+                if(index !== -1) {
+                    itemData.createdAt = db.items[index].createdAt; // keep original
+                    db.items[index] = itemData;
+                }
+            } else {
+                // Insert
+                db.items.push(itemData);
+            }
+
+            modalMasterObj.hide();
+            saveDataState();
+        }
+
+        function deleteMasterBarang(id) {
+            // Check if item has transactions
+            const hasIn = db.inbound.some(i => i.itemId === id);
+            const hasOut = db.outbound.some(i => i.itemId === id);
+
+            if(hasIn || hasOut) {
+                Swal.fire('Tidak Dapat Dihapus', 'Barang ini sudah memiliki riwayat transaksi (masuk/keluar).', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Hapus Barang?',
+                text: "Data yang dihapus tidak dapat dikembalikan!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Hapus!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    db.items = db.items.filter(i => i.id !== id);
+                    saveDataState();
+                }
+            });
+        }
+
+        // ================= TRANSACTIONS (IN / OUT) =================
+
+        function populateItemDropdowns() {
+            const inSelect = document.getElementById('in-item-id');
+            const outSelect = document.getElementById('out-item-id');
+            
+            let options = '<option value="">-- Pilih Barang --</option>';
+            // Sort alphabet
+            const sortedItems = [...db.items].sort((a,b) => a.nama.localeCompare(b.nama));
+
+            sortedItems.forEach(item => {
+                options += `<option value="${item.id}">${item.nama} (${item.unit})</option>`;
+            });
+
+            inSelect.innerHTML = options;
+            outSelect.innerHTML = options;
+        }
+
+        function updateInboundUnitInfo() {
+            const itemId = document.getElementById('in-item-id').value;
+            const unitInput = document.getElementById('in-unit');
+            
+            if(itemId) {
+                const item = db.items.find(i => i.id === itemId);
+                unitInput.value = item ? item.unit : '';
+            } else {
+                unitInput.value = '';
+            }
+        }
+
+        function updateOutboundOptions() {
+            const itemId = document.getElementById('out-item-id').value;
+            const unitInput = document.getElementById('out-unit');
+            const subUnitSelect = document.getElementById('out-sub-unit');
+            const stockInfo = document.getElementById('out-stock-info');
+            const qtyInput = document.getElementById('out-jumlah');
+            
+            subUnitSelect.innerHTML = '<option value="">-- Pilih --</option>';
+            qtyInput.value = '';
+            qtyInput.classList.remove('is-invalid');
+
+            if(itemId) {
+                const item = db.items.find(i => i.id === itemId);
+                if(item) {
+                    unitInput.value = item.unit;
+                    
+                    // Show current stock info
+                    const currentStock = calcCurrentStock(itemId);
+                    stockInfo.innerText = `Sisa Stok: ${currentStock} ${item.satuan}`;
+                    qtyInput.max = currentStock;
+
+                    // Populate Sub Unit based on Unit
+                    if (item.unit === 'CSSD') {
+                        subUnitSelect.innerHTML += `
+                            <option value="CSSD Berkoh">CSSD Berkoh</option>
+                            <option value="CSSD Geriatri">CSSD Geriatri</option>
+                        `;
+                    } else if (item.unit === 'Laundry') {
+                        subUnitSelect.innerHTML += `
+                            <option value="Laundry Berkoh">Laundry Berkoh</option>
+                            <option value="Laundry Geriatri">Laundry Geriatri</option>
+                        `;
+                    }
+                }
+            } else {
+                unitInput.value = '';
+                stockInfo.innerText = '';
+                qtyInput.removeAttribute('max');
+            }
+        }
+
+        function saveBarangMasuk(e) {
+            e.preventDefault();
+            const form = document.getElementById('form-masuk');
+            if(!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+
+            const data = {
+                id: generateId('IN'),
+                itemId: document.getElementById('in-item-id').value,
+                jumlah: document.getElementById('in-jumlah').value,
+                tanggal: document.getElementById('in-tanggal').value,
+                keterangan: document.getElementById('in-keterangan').value
+            };
+
+            db.inbound.push(data);
+            form.reset();
+            form.classList.remove('was-validated');
+            document.getElementById('in-tanggal').value = new Date().toISOString().split('T')[0];
+            
+            saveDataState();
+        }
+
+        function saveBarangKeluar(e) {
+            e.preventDefault();
+            const form = document.getElementById('form-keluar');
+            const qtyInput = document.getElementById('out-jumlah');
+            
+            if(!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+
+            const itemId = document.getElementById('out-item-id').value;
+            const jumlahKeluar = parseInt(qtyInput.value);
+            const currentStock = calcCurrentStock(itemId);
+
+            // Manual Validation for Stock
+            if (jumlahKeluar > currentStock) {
+                qtyInput.classList.add('is-invalid');
+                showToast('Gagal! Stok tidak mencukupi.', 'error');
+                return;
+            } else {
+                qtyInput.classList.remove('is-invalid');
+            }
+
+            const data = {
+                id: generateId('OUT'),
+                itemId: itemId,
+                subUnit: document.getElementById('out-sub-unit').value,
+                jumlah: jumlahKeluar,
+                tanggal: document.getElementById('out-tanggal').value,
+                keterangan: document.getElementById('out-keterangan').value
+            };
+
+            db.outbound.push(data);
+            form.reset();
+            form.classList.remove('was-validated');
+            document.getElementById('out-tanggal').value = new Date().toISOString().split('T')[0];
+            document.getElementById('out-stock-info').innerText = '';
+            
+            saveDataState();
+        }
+
+        function renderRecentTransactions() {
+            // Render Masuk (Max 5)
+            const tbodyIn = document.getElementById('table-recent-in');
+            tbodyIn.innerHTML = '';
+            const recentIn = [...db.inbound].sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal)).slice(0, 5);
+            
+            recentIn.forEach(trx => {
+                const item = db.items.find(i => i.id === trx.itemId);
+                const itemName = item ? item.nama : 'Unknown';
+                tbodyIn.innerHTML += `
+                    <tr>
+                        <td>${trx.tanggal}</td>
+                        <td class="fw-bold">${itemName}</td>
+                        <td class="text-success fw-bold">+${trx.jumlah}</td>
+                        <td class="small text-muted">${trx.keterangan || '-'}</td>
+                    </tr>
+                `;
+            });
+
+            // Render Keluar (Max 5)
+            const tbodyOut = document.getElementById('table-recent-out');
+            tbodyOut.innerHTML = '';
+            const recentOut = [...db.outbound].sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal)).slice(0, 5);
+            
+            recentOut.forEach(trx => {
+                const item = db.items.find(i => i.id === trx.itemId);
+                const itemName = item ? item.nama : 'Unknown';
+                tbodyOut.innerHTML += `
+                    <tr>
+                        <td>${trx.tanggal}</td>
+                        <td class="fw-bold">${itemName}</td>
+                        <td><span class="badge bg-info text-dark">${trx.subUnit}</span></td>
+                        <td class="text-danger fw-bold">-${trx.jumlah}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // ================= LAPORAN =================
+
+        function generateReport() {
+            const startStr = document.getElementById('rep-start').value;
+            const endStr = document.getElementById('rep-end').value;
+            
+            const startDate = startStr ? new Date(startStr) : new Date('2000-01-01');
+            const endDate = endStr ? new Date(endStr) : new Date('2100-01-01');
+            
+            // Set time boundaries for proper inclusion
+            startDate.setHours(0,0,0,0);
+            endDate.setHours(23,59,59,999);
+
+            const tbody = document.getElementById('table-report');
+            tbody.innerHTML = '';
+
+            db.items.forEach((item, index) => {
+                // Filter Inbound based on date range
+                const inRange = db.inbound.filter(i => {
+                    const d = new Date(i.tanggal);
+                    return i.itemId === item.id && d >= startDate && d <= endDate;
+                });
+                const totalInRange = inRange.reduce((sum, curr) => sum + parseInt(curr.jumlah), 0);
+
+                // Filter Outbound based on date range
+                const outRange = db.outbound.filter(o => {
+                    const d = new Date(o.tanggal);
+                    return o.itemId === item.id && d >= startDate && d <= endDate;
+                });
+                const totalOutRange = outRange.reduce((sum, curr) => sum + parseInt(curr.jumlah), 0);
+
+                // Need absolute current stock to show actual state, 
+                // but report might want 'stock at that time'. 
+                // Standard inventory reports usually show activity in period, and CURRENT final stock.
+                const finalStock = calcCurrentStock(item.id); 
+                
+                let statusBadge = finalStock <= item.minStok ? 
+                    '<span class="badge-low-stock">Kritis</span>' : 
+                    '<span class="badge-safe-stock">Aman</span>';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>
+                            <div class="fw-bold">${item.nama}</div>
+                            <div class="small text-muted">${item.id}</div>
+                        </td>
+                        <td>${item.unit}</td>
+                        <td>${item.stokAwal}</td>
+                        <td class="text-success fw-bold">${totalInRange}</td>
+                        <td class="text-danger fw-bold">${totalOutRange}</td>
+                        <td class="bg-primary text-white fw-bold h5 mb-0 text-center">${finalStock}</td>
+                        <td>${item.minStok}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function exportCSV() {
+            let csv = 'No,Kode Barang,Nama Barang,Kategori,Unit,Stok Awal,Total Masuk,Total Keluar,Stok Akhir,Min Stok\n';
+            
+            // Get current filtered data logic
+            const startStr = document.getElementById('rep-start').value;
+            const endStr = document.getElementById('rep-end').value;
+            const startDate = startStr ? new Date(startStr) : new Date('2000-01-01');
+            const endDate = endStr ? new Date(endStr) : new Date('2100-01-01');
+            startDate.setHours(0,0,0,0); endDate.setHours(23,59,59,999);
+
+            db.items.forEach((item, index) => {
+                const totalIn = db.inbound.filter(i => i.itemId === item.id && new Date(i.tanggal) >= startDate && new Date(i.tanggal) <= endDate)
+                                          .reduce((sum, curr) => sum + parseInt(curr.jumlah), 0);
+                const totalOut = db.outbound.filter(o => o.itemId === item.id && new Date(o.tanggal) >= startDate && new Date(o.tanggal) <= endDate)
+                                           .reduce((sum, curr) => sum + parseInt(curr.jumlah), 0);
+                const finalStock = calcCurrentStock(item.id);
+
+                // Escape quotes in strings
+                const safeName = `"${item.nama.replace(/"/g, '""')}"`;
+                
+                csv += `${index + 1},${item.id},${safeName},${item.kategori},${item.unit},${item.stokAwal},${totalIn},${totalOut},${finalStock},${item.minStok}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            link.setAttribute("download", `Laporan_Inventori_ICPH_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // ================= UTILITY =================
+        function confirmResetData() {
+            Swal.fire({
+                title: 'BAHAYA! Reset Semua Data?',
+                text: "Tindakan ini akan menghapus SELURUH data Master dan Transaksi. Anda yakin?",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'YA, RESET SEMUA!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    db = { items: [], inbound: [], outbound: [] };
+                    saveDataState();
+                    Swal.fire('Terhapus', 'Semua data telah direset.', 'success');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
