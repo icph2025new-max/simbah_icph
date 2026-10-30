@@ -535,6 +535,11 @@
 
     <!-- Application Logic -->
     <script>
+        // ================= KONFIGURASI API =================
+        // MASUKKAN URL WEB APP GOOGLE APPS SCRIPT ANDA DI BAWAH INI
+        // (Biarkan kosong "" jika masih ingin mengetes menggunakan LocalStorage)
+        const GAS_URL = "";https://script.google.com/macros/s/AKfycbzUqQeXbfeNpYKIiimod6quJhYspfQiO1X-jJ3xAvwQc84ECAa2CDO84eEtRjp4SVkF/exec 
+
         // ================= STATE & DATABASE =================
         let db = {
             items: [],
@@ -579,8 +584,8 @@
         function loadData() {
             startLoading();
 
-            if (typeof google === 'undefined') {
-                // SIMULATION MODE (Canvas / Local Browser)
+            if (GAS_URL === "") {
+                // SIMULATION MODE (Canvas / Local Browser / Vercel tanpa API)
                 console.log("Running in Simulation Mode (LocalStorage)");
                 const localData = localStorage.getItem('simbah_icph_data');
                 
@@ -604,46 +609,54 @@
                 endLoading();
 
             } else {
-                // PRODUCTION MODE (Google Apps Script)
-                google.script.run
-                    .withSuccessHandler(res => {
+                // PRODUCTION MODE (REST API)
+                fetch(GAS_URL + "?action=getData")
+                    .then(response => response.json())
+                    .then(res => {
                         db = res;
                         renderUI();
                         endLoading();
                     })
-                    .withFailureHandler(err => {
-                        console.error(err);
-                        Swal.fire('Error', 'Gagal memuat data dari server', 'error');
+                    .catch(err => {
+                        console.error("Fetch Error:", err);
+                        Swal.fire('Error', 'Gagal memuat data dari server Spreadsheet', 'error');
                         endLoading();
-                    })
-                    .getAllData();
+                    });
             }
         }
 
         function saveDataState() {
             startLoading();
             
-            if (typeof google === 'undefined') {
+            if (GAS_URL === "") {
                 // SIMULATION MODE
                 localStorage.setItem('simbah_icph_data', JSON.stringify(db));
                 renderUI();
                 endLoading();
-                showToast('Data berhasil disimpan', 'success');
+                showToast('Data berhasil disimpan (Lokal)', 'success');
             } else {
-                // PRODUCTION MODE
-                const dataStr = JSON.stringify(db);
-                google.script.run
-                    .withSuccessHandler(() => {
+                // PRODUCTION MODE (REST API)
+                // Kita gunakan text/plain agar tidak terkena block CORS Preflight (OPTIONS) dari browser
+                fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(db)
+                })
+                .then(response => response.json())
+                .then(res => {
+                    if(res.status === 'success') {
                         renderUI();
                         endLoading();
-                        showToast('Data berhasil disimpan ke Cloud', 'success');
-                    })
-                    .withFailureHandler(err => {
-                        console.error(err);
-                        Swal.fire('Error', 'Gagal menyimpan ke server', 'error');
-                        endLoading();
-                    })
-                    .saveDataState(dataStr);
+                        showToast('Data berhasil disimpan ke Spreadsheet', 'success');
+                    } else {
+                        throw new Error(res.message);
+                    }
+                })
+                .catch(err => {
+                    console.error("Save Error:", err);
+                    Swal.fire('Error', 'Gagal menyimpan ke server', 'error');
+                    endLoading();
+                });
             }
         }
 

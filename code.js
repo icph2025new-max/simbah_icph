@@ -8,12 +8,37 @@ const SHEET_ITEMS = 'MasterBarang';
 const SHEET_INBOUND = 'BarangMasuk';
 const SHEET_OUTBOUND = 'BarangKeluar';
 
-function doGet() {
+function doGet(e) {
+  // Jika ada request GET dengan parameter ?action=getData, kembalikan JSON
+  if (e && e.parameter && e.parameter.action === 'getData') {
+    const data = getAllData();
+    return ContentService.createTextOutput(JSON.stringify(data))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Default (jika URL diakses langsung di browser): Tampilkan UI HTML
   return HtmlService.createTemplateFromFile('Index')
     .evaluate()
     .setTitle('SI MBAH ICPH - Inventory')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/**
+ * Menerima request POST untuk menyimpan data (REST API dari Vercel/luar)
+ */
+function doPost(e) {
+  try {
+    // Membaca payload request (dikirim sebagai text/plain untuk bypass CORS Preflight)
+    const dataStr = e.postData.contents;
+    saveDataState(dataStr);
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: 'success' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 /**
